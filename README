@@ -1,0 +1,26 @@
+			图书管理系统
+	com.nomad.admin_ui存放管理员用户界面，
+	com.nomad.reader_ui存放读者用户界面，但是还没有实现。
+	com.nomad.connection存放对mysql数据库各种操作，也是最核心的部分。
+							initial()构造函数只导入驱动包。
+							对数据库的连接和释放均放在各个函数的内部，每当执行完一个函数就释放连接。（代码显得有些臃肿）
+							如果在某个函数中调用了其他的函数，要注意在此调用函数里面重新获得连接，因为被调用函数把连接给close了。
+	com.nomad.entity存放实体类，也就是数据库中各表的模型描述，包括 Reader,Lend，Book, User。
+	
+	
+注意：在com.nomad.connection.Jdbc.java中：
+		因为connection, statement, resultSet, url, url1是类的局部变量，相对函数来说是全局变量，如果出现函数间的调用，
+	要注意变量构造的位置，防止被被调用函数改变。（其实改变这一点，可以通过new Jdbc().*来调用函数，那么对于数据库的连接和释放可以简单很多，
+	类Jdbc中代码结构会更加清晰，冗余度会减少很多，代码量也会减少。但是在此没有尝试，因为我做完之后才发现的！！！） 
+	
+	MySQL不支持字段的check约束功能，所以在建表的时候对某些表（Book, Lend）中相应的字段添加了update,insert触发器，防止Quantity<0,Uright不是0和1，就默认
+设置Quantity = 0， Uright = 1(读者权限)。(其实这样并不好，因为用户并不知道，但是这是为了防止程序员的操作失误，其实抛出异常更好)。同时在Java代码中进行了各种
+用户输入是否合法的判断。比如添加借阅信息时，Quantity<0就会报错。当然对修改借阅信息（包括借书，还书）的判断就要复杂一点。
+	
+	
+常见异常：
+	... refused after connection is closed:   连接被关闭了（可能被其他被调用函数关闭了），要在调用函数里面找到对应位置，在statement前面获取连接。
+	... refused after resultSet is closed:	查询的结果集被关闭了，原因是一个statement对应多条查询语句，新的查询开始会关闭旧的查询结果集，当再次使用
+旧的结果集就会出现异常。所以最好每个statement对应一条查询语句或者查询结果集之间不要交叉执行，每当得到一个结果集，就对它操作完成，在执行下一条查询。
+	out of range：一般都是下标越界。表的字段列是从1开始的。
+	
